@@ -5,112 +5,86 @@ import java.util.Observable;
 
 public class GameDataModel extends Observable {
     double angularVelocity = 0;
-    int counter = 0;
-    private volatile double m_robotPositionX = 100;
+    static int counter = 0;
+    Position targetPosition = new Position(250, 100);
+    static Position robotPosition = new Position(100, 100);
+    Target target = new Target(targetPosition);
+    static Robot robot = new Robot(robotPosition, 0, 0.1, 0.001, 0);
     public static String KEY_COORDINATE_ROBOT = "robot changed";
     public static String KEY_COORDINATE_TARGET = "target changed";
-    private volatile double m_robotPositionY = 100;
-    private volatile double m_robotDirection = 0;
 
-    private volatile int m_targetPositionX = 250;
-    private volatile int m_targetPositionY = 100;
+    enum Turn{
+        RIGHT,
+        LEFT;
 
-    private static final double maxVelocity = 0.1;
-    private static final double maxAngularVelocity = 0.001;
+        public static boolean checkForLeftTurn(double angleToTarget){
+            return angleToTarget < robot.m_robotDirection && robot.angularVelocity != -robot.maxAngularVelocity;
+        }
+        public static boolean checkForRightTurn(double angleToTarget) {
+            return angleToTarget > robot.m_robotDirection && robot.angularVelocity != robot.maxAngularVelocity;
+            }
 
-    public double getM_robotPositionX() {
-        return m_robotPositionX;
-    }
-
-    public double getM_robotPositionY() {
-        return m_robotPositionY;
-    }
-
-    public double getM_robotDirection() {
-        return m_robotDirection;
-    }
-
-    public int getM_targetPositionX() {
-        return m_targetPositionX;
-    }
-
-    public int getM_targetPositionY() {
-        return m_targetPositionY;
+        public void actionForRight() {
+            counter++;
+            robot.angularVelocity = robot.maxAngularVelocity;
+        }
+        public void actionForLeft(){
+            counter++;
+            robot.angularVelocity = -robot.maxAngularVelocity;
+        }
     }
 
 
     protected void setTargetPosition(Point p) {
-        m_targetPositionX = p.x;
-        m_targetPositionY = p.y;
+        target.position.x = p.x;
+        target.position.y = p.y;
         setChanged();
         notifyObservers(KEY_COORDINATE_TARGET);
         clearChanged();
     }
 
 
-    private static double distance(double x1, double y1, double x2, double y2) {
-        double diffX = x1 - x2;
-        double diffY = y1 - y2;
-        return Math.sqrt(diffX * diffX + diffY * diffY);
-    }
 
-    private static double angleTo(double fromX, double fromY, double toX, double toY) {
-        double diffX = toX - fromX;
-        double diffY = toY - fromY;
-        return asNormalizedRadians(Math.atan2(diffY, diffX));
-    }
 
     protected void onModelUpdateEvent() {
 
-        double distance = distance(m_targetPositionX, m_targetPositionY,
-                m_robotPositionX, m_robotPositionY);
+        double distance = Geometry.distance(target.position, robot.position);
         if (distance < 0.5) {
             counter = 0;
             return;
         }
-        double velocity = maxVelocity;
-        double angleToTarget = angleTo(m_robotPositionX, m_robotPositionY, m_targetPositionX, m_targetPositionY);
+        double velocity = robot.maxVelocity;
+        double angleToTarget = Geometry.angleTo(robot.position, target.position);
 
+        takeAngleForTurn(distance, angleToTarget);
 
-//           System.out.println();
-        System.out.println(counter);
-        if (distance>=angularVelocity*maxVelocity&&angleToTarget!=m_robotDirection) {
+        moveRobot(velocity, robot.angularVelocity, 10);
+    }
+
+    private static void takeAngleForTurn(double distance, double angleToTarget) {
+        if (distance >=robot.angularVelocity*robot.maxVelocity&& angleToTarget !=robot.m_robotDirection) {
             if (counter<2) {
-                if (angleToTarget > m_robotDirection && angularVelocity != maxAngularVelocity) {
-                    counter++;
-                    angularVelocity = maxAngularVelocity;
+                if (Turn.checkForRightTurn(angleToTarget)) {
+                    Turn turn = Turn.RIGHT;
+                    turn.actionForRight();
                 }
-                if (angleToTarget < m_robotDirection && angularVelocity != -maxAngularVelocity) {
-                    counter++;
-                    angularVelocity = -maxAngularVelocity;
+                if (Turn.checkForLeftTurn(angleToTarget)) {
+                    Turn turn = Turn.LEFT;
+                    turn.actionForLeft();
                 }
             }else {
-                if (Math.abs(angleToTarget - m_robotDirection)<0.1) {
-                    angularVelocity = 0;
-                    if (angleToTarget > m_robotDirection)
-                        angularVelocity = maxAngularVelocity;
-                    if (angleToTarget < m_robotDirection)
-                        angularVelocity = -maxAngularVelocity;
+                if (Math.abs(angleToTarget - robot.m_robotDirection)<0.1) {
+                    robot.angularVelocity = 0;
+                    if (angleToTarget > robot.m_robotDirection)
+                        robot.angularVelocity = robot.maxAngularVelocity;
+                    if (angleToTarget < robot.m_robotDirection)
+                        robot.angularVelocity = -robot.maxAngularVelocity;
                 }
             }
         }
-
-        moveRobot(velocity, angularVelocity, 10);
     }
 
-    private static double asNormalizedRadians(double angle) {
-
-        if (angle < 0) {
-//            System.out.println("<");
-            angle += 2 * Math.PI;
-        }
-        if (angle >= 2* Math.PI) {
-//            System.out.println(">");
-            angle -= 2 * Math.PI;
-        }
-        return angle;
-    }
-
+    //enum как состояние поворота, Метод для onUpdate,
     private static double applyLimits(double value, double min, double max) {
         if (value < min)
             return min;
@@ -120,32 +94,27 @@ public class GameDataModel extends Observable {
     }
 
     private void moveRobot(double velocity, double angularVelocity, double duration) {
-        velocity = applyLimits(velocity, 0, maxVelocity);
-        angularVelocity = applyLimits(angularVelocity, -maxAngularVelocity, maxAngularVelocity);
-        double newX = m_robotPositionX + velocity / angularVelocity *
-                (Math.sin(m_robotDirection + angularVelocity * duration) -
-                        Math.sin(m_robotDirection));
+        velocity = applyLimits(velocity, 0, robot.maxVelocity);
+        angularVelocity = applyLimits(angularVelocity, -robot.maxAngularVelocity, robot.maxAngularVelocity);
+        double newX = robot.position.x + velocity / angularVelocity *
+                (Math.sin(robot.m_robotDirection + angularVelocity * duration) -
+                        Math.sin(robot.m_robotDirection));
         if (!Double.isFinite(newX)) {
-            newX = m_robotPositionX + velocity * duration * Math.cos(m_robotDirection);
+            newX = robot.position.x + velocity * duration * Math.cos(robot.m_robotDirection);
         }
-        double newY = m_robotPositionY - velocity / angularVelocity *
-                (Math.cos(m_robotDirection + angularVelocity * duration) -
-                        Math.cos(m_robotDirection));
+        double newY = robot.position.y - velocity / angularVelocity *
+                (Math.cos(robot.m_robotDirection + angularVelocity * duration) -
+                        Math.cos(robot.m_robotDirection));
         if (!Double.isFinite(newY)) {
-            newY = m_robotPositionY + velocity * duration * Math.sin(m_robotDirection);
+            newY = robot.position.y + velocity * duration * Math.sin(robot.m_robotDirection);
         }
-        m_robotPositionX = newX;
-        m_robotPositionY = newY;
-        double newDirection = asNormalizedRadians(m_robotDirection + angularVelocity * duration );
-        m_robotDirection = newDirection;
+        robot.position.x = newX;
+        robot.position.y = newY;
+        double newDirection = Geometry.asNormalizedRadians(robot.m_robotDirection + angularVelocity * duration );
+        robot.m_robotDirection = newDirection;
         setChanged();
         notifyObservers(KEY_COORDINATE_ROBOT);
         clearChanged();
     }
 
-
-
-    static int round(double value) {
-        return (int) (value + 0.5);
-    }
 }
