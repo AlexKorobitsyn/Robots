@@ -202,8 +202,9 @@ public class MainApplicationFrame extends JFrame {
     private void exit() throws IOException {
         Object[] options = {"Да",
                 "Нет"};
-        int s = JOptionPane.showOptionDialog(null, "Вы уверены что хотите выйти?", "Уведомление", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-        if (s == JOptionPane.YES_OPTION) {
+        int confirm = JOptionPane.showOptionDialog(null, "Вы уверены что хотите выйти?",
+                "Уведомление", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+        if (confirm == JOptionPane.YES_OPTION) {
             saveData();
             System.exit(0);
         }
