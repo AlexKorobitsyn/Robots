@@ -1,13 +1,15 @@
 package gui;
 
 import java.awt.Frame;
+import java.io.File;
+import java.io.IOException;
 
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 public class RobotsProgram
 {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
       try {
 //        UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
 //        UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");

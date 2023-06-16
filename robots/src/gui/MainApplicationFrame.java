@@ -1,12 +1,14 @@
 package gui;
 
+import log.Logger;
+
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyVetoException;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,9 +17,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-import javax.swing.*;
-
-import log.Logger;
+import log.Logger.*;
 
 /**
  * Что требуется сделать:
@@ -26,7 +26,8 @@ import log.Logger;
  */
 public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
-
+    LogWindow logWindow = createLogWindow();
+    GameWindow gameWindow = new GameWindow();
     public MainApplicationFrame() {
         //Make the big window be indented 50 pixels from each edge
         //of the screen.
@@ -42,8 +43,7 @@ public class MainApplicationFrame extends JFrame {
         HashMap<String, Rectangle> mapCheck = new HashMap<>();
         mapCheck.put("\"Протокол работы\"", logRec);
         mapCheck.put("\"Игровое поле\"", gameRec);
-        LogWindow logWindow = createLogWindow();
-        GameWindow gameWindow = new GameWindow();
+
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         try {
             String string = readUsingFiles(System.getenv("USERPROFILE") + "\\setting.txt");
@@ -63,11 +63,24 @@ public class MainApplicationFrame extends JFrame {
         } catch (IOException ignored) {
         }
         logWindow.setBounds(logRec);
+        logWindow.setSize();
+        logWindow.setLocation();
         addWindow(logWindow);
-
+        try {
+            logWindow.setIcon(logWindow.getStateIcon());
+        } catch (PropertyVetoException e) {
+            throw new RuntimeException(e);
+        }
 
         gameWindow.setBounds(gameRec);
+        gameWindow.setSize();
+        gameWindow.setLocation();
         addWindow(gameWindow);
+        try {
+            gameWindow.setIcon(gameWindow.getStateIcon());
+        } catch (PropertyVetoException ignored) {
+        }
+
         setJMenuBar(generateMenuBar());
         addWindowListener(new WindowAdapter()
         {
@@ -219,26 +232,7 @@ public class MainApplicationFrame extends JFrame {
         }
     }
     private void saveData() throws IOException {
-        File file = new File(System.getenv("USERPROFILE") + "\\setting.txt");
-        if (file.createNewFile()) {
-            System.out.println("File is created!");
-        } else {
-            System.out.println("File already exists.");
-        }
-        FileWriter writer = new FileWriter(file);
-        writer.write("1\n");
-        writer.write("Test data:\n");
-        JInternalFrame[] arr = desktopPane.getAllFrames();
-        for (JInternalFrame var : arr) {
-            writer.write("\"" + var.getTitle() + "\" ");
-            if (var.isIcon())
-                writer.write("\"Не Свёрнуто\" ");
-            else
-                writer.write("\"Свёрнуто\" ");
-            Rectangle a = var.getBounds();
-            writer.write("x=" + a.x + " y=" + a.y + " width=" + a.width + " ");
-            writer.write("height=" + a.height + "\n");
-        }
-        writer.close();
+        this.logWindow.save();
+        this.gameWindow.save();
     }
 }
