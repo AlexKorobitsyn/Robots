@@ -3,32 +3,36 @@ package gui;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.TextArea;
+import java.io.File;
 
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 
+import Serialize.WindowWithSerialize;
 import log.LogChangeListener;
 import log.LogEntry;
 import log.LogWindowSource;
 
-public class LogWindow extends JInternalFrame implements LogChangeListener
+public class LogWindow extends WindowWithSerialize implements LogChangeListener
 {
     private LogWindowSource m_logSource;
     private TextArea m_logContent;
 
     public LogWindow(LogWindowSource logSource) 
     {
-        super("Протокол работы", true, true, true, true);
+        super("Протокол работы", true, true, true, true, System.getProperty("user.home") + File.separator + "dataLogWindow.txt");
         m_logSource = logSource;
         m_logSource.registerListener(this);
         m_logContent = new TextArea("");
-        m_logContent.setSize(200, 500);
+        m_logContent.setSize(200, 400);
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(m_logContent, BorderLayout.CENTER);
         getContentPane().add(panel);
+
         pack();
         updateLogContent();
+        restore();
     }
 
     private void updateLogContent()
